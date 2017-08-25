@@ -4,7 +4,7 @@
   "version": "0.21.4",
   "license": "MIT",
   "repository": "git://github.com/ianstormtaylor/slate.git",
-  "main": "./lib/index.js",
+  "main": "./src/index.js",
   "dependencies": {
     "debug": "^2.3.2",
     "direction": "^0.1.5",
@@ -99,7 +99,6 @@
     "gh-pages": "npm run build && npm run examples && gh-pages --dist ./examples",
     "lint": "eslint --ignore-pattern 'build.dev.js' --ignore-pattern 'build.prod.js' '{examples,src}/**/*.js'",
     "open": "open http://localhost:8080/dev.html",
-    "postpublish": "npm run gh-pages",
     "prepublish": "npm run build",
     "release": "np",
     "release:next": "np --tag=next",
