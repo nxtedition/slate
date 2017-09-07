@@ -7,6 +7,7 @@ import Types from 'prop-types'
 import TRANSFER_TYPES from '../constants/transfer-types'
 import Base64 from '../serializers/base-64'
 import Leaf from './leaf'
+import SlateTypes from '../utils/prop-types'
 import Void from './void'
 import getWindow from 'get-window'
 import scrollToSelection from '../utils/scroll-to-selection'
@@ -35,13 +36,13 @@ class Node extends React.Component {
    */
 
   static propTypes = {
-    block: Types.object,
+    block: SlateTypes.block,
     editor: Types.object.isRequired,
-    node: Types.object.isRequired,
-    parent: Types.object.isRequired,
+    node: SlateTypes.node.isRequired,
+    parent: SlateTypes.node.isRequired,
     readOnly: Types.bool.isRequired,
-    schema: Types.object.isRequired,
-    state: Types.object.isRequired
+    schema: SlateTypes.schema.isRequired,
+    state: SlateTypes.state.isRequired,
   }
 
   /**
@@ -109,6 +110,10 @@ class Node extends React.Component {
     // which this won't catch. But that's rare and not a drag on performance, so
     // for simplicity we just let them through.
     if (nextProps.node != props.node) return true
+
+    // If the Node has children that aren't just Text's then allow them to decide
+    // If they should update it or not.
+    if (nextProps.node.kind != 'text' && Text.isTextList(nextProps.node.nodes) == false) return true
 
     // If the node is a block or inline, which can have custom renderers, we
     // include an extra check to re-render if the node either becomes part of,

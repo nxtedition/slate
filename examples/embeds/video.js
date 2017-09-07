@@ -17,7 +17,7 @@ class Video extends React.Component {
 
   isSelected = () => {
     const { node, state } = this.props
-    const isSelected = state.selection.hasEdgeIn(node)
+    const isSelected = state.isFocused && state.blocks.includes(node)
     return isSelected
   }
 
@@ -30,17 +30,7 @@ class Video extends React.Component {
   onChange = (e) => {
     const video = e.target.value
     const { node, editor } = this.props
-    const properties = {
-      data: { video }
-    }
-
-    const next = editor
-      .getState()
-      .transform()
-      .setNodeByKey(node.key, properties)
-      .apply()
-
-    editor.onChange(next)
+    editor.transform(t => t.setNodeByKey(node.key, { data: { video }}))
   }
 
   /**
