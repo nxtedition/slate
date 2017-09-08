@@ -164,6 +164,9 @@ class Content extends React.Component {
       return
     }
 
+    // If the selection isn't set, do nothing.
+    if (selection.isUnset) return
+
     // Otherwise, figure out which DOM nodes should be selected...
     const { anchorText, focusText } = state
     const { anchorKey, anchorOffset, focusKey, focusOffset } = selection
@@ -785,14 +788,39 @@ class Content extends React.Component {
         isBackward: null
       }
 
-      // If the selection is at the end of a non-void inline node, and there is
-      // a node after it, put it in the node after instead.
       const anchorText = document.getNode(anchor.key)
       const focusText = document.getNode(focus.key)
       const anchorInline = document.getClosestInline(anchor.key)
       const focusInline = document.getClosestInline(focus.key)
+      const focusBlock = document.getClosestBlock(focus.key)
+      const anchorBlock = document.getClosestBlock(anchor.key)
 
-      if (anchorInline && !anchorInline.isVoid && anchor.offset == anchorText.text.length) {
+      // COMPAT: If the anchor point is at the start of a non-void, and the
+      // focus point is inside a void node with an offset that isn't `0`, set
+      // the focus offset to `0`. This is due to void nodes <span>'s being
+      // positioned off screen, resulting in the offset always being greater
+      // than `0`. Since we can't know what it really should be, and since an
+      // offset of `0` is less destructive because it creates a hanging
+      // selection, go with `0`. (2017/09/07)
+      if (
+        anchorBlock &&
+        !anchorBlock.isVoid &&
+        anchor.offset == 0 &&
+        focusBlock &&
+        focusBlock.isVoid &&
+        focus.offset != 0
+      ) {
+        properties.focusOffset = 0
+      }
+
+      // COMPAT: If the selection is at the end of a non-void inline node, and
+      // there is a node after it, put it in the node after instead. This
+      // standardizes the behavior, since it's indistinguishable to the user.
+      if (
+        anchorInline &&
+        !anchorInline.isVoid &&
+        anchor.offset == anchorText.text.length
+      ) {
         const block = document.getClosestBlock(anchor.key)
         const next = block.getNextText(anchor.key)
         if (next) {
@@ -801,7 +829,11 @@ class Content extends React.Component {
         }
       }
 
-      if (focusInline && !focusInline.isVoid && focus.offset == focusText.text.length) {
+      if (
+        focusInline &&
+        !focusInline.isVoid &&
+        focus.offset == focusText.text.length
+      ) {
         const block = document.getClosestBlock(focus.key)
         const next = block.getNextText(focus.key)
         if (next) {
@@ -829,10 +861,12 @@ class Content extends React.Component {
     const { props } = this
     const { className, readOnly, state, tabIndex, role, tagName } = props
     const Container = tagName
-    const { document } = state
-    const children = document.nodes
-      .map(node => this.renderNode(node))
-      .toArray()
+    const { document, selection } = state
+    const indexes = document.getSelectionIndexes(selection, selection.isFocused)
+    const children = document.nodes.toArray().map((child, i) => {
+      const isSelected = !!indexes && indexes.start <= i && i < indexes.end
+      return this.renderNode(child, isSelected)
+    })
 
     const style = {
       // Prevent the default outline styles.
@@ -898,25 +932,27 @@ class Content extends React.Component {
   }
 
   /**
-   * Render a `node`.
+   * Render a `child` node of the document.
    *
-   * @param {Node} node
+   * @param {Node} child
+   * @param {Boolean} isSelected
    * @return {Element}
    */
 
-  renderNode = (node) => {
+  renderNode = (child, isSelected) => {
     const { editor, readOnly, schema, state } = this.props
-
+    const { document } = state
     return (
       <Node
-        key={node.key}
         block={null}
-        node={node}
-        parent={state.document}
+        editor={editor}
+        isSelected={isSelected}
+        key={child.key}
+        node={child}
+        parent={document}
+        readOnly={readOnly}
         schema={schema}
         state={state}
-        editor={editor}
-        readOnly={readOnly}
       />
     )
   }

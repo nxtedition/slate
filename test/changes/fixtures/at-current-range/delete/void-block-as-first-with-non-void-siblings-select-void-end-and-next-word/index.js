@@ -19,18 +19,17 @@ export default function (state) {
     .delete()
     .state
 
-  assert.deepEqual(
-    next.selection.toJS(),
-    {
-      anchorKey: first.key,
-      anchorOffset: 1,
-      focusKey: first.key,
-      focusOffset: 1,
-      isBackward: false,
-      isFocused: false,
-      marks: null
-    }
-  )
+  const updated = next.document.getTexts().first()
+
+  assert.deepEqual(next.selection.toJS(), {
+    anchorKey: updated.key,
+    anchorOffset: 0,
+    focusKey: updated.key,
+    focusOffset: 0,
+    isBackward: false,
+    isFocused: false,
+    marks: null
+  })
 
   return next
 }

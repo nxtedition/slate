@@ -6,7 +6,7 @@ import Inline from './inline'
 import Text from './text'
 import direction from 'direction'
 import generateKey from '../utils/generate-key'
-import isInRange from '../utils/is-in-range'
+import isIndexInRange from '../utils/is-index-in-range'
 import isPlainObject from 'is-plain-object'
 import logger from '../utils/logger'
 import memoize from '../utils/memoize'
@@ -460,7 +460,7 @@ class Node {
       .getTextsAtRange(range)
       .reduce((arr, text) => {
         const chars = text.characters
-          .filter((char, i) => isInRange(i, text, range))
+          .filter((char, i) => isIndexInRange(i, text, range))
           .toArray()
 
         return arr.concat(chars)
@@ -1029,7 +1029,7 @@ class Node {
   }
 
   /**
-   * Get a set of the marks in a `range`.
+   * Get a set of the marks in a `range`, by unioning.
    *
    * @param {Selection} range
    * @return {Array}
@@ -1065,6 +1065,13 @@ class Node {
       }, [])
   }
 
+  /**
+   * Get a set of marks in a `range`, by intersecting.
+   *
+   * @param {Selection} range
+   * @return {Array}
+   */
+
   getActiveMarksAtRangeAsArray(range) {
     range = range.normalize(this)
     if (range.isUnset) return []
@@ -1089,11 +1096,15 @@ class Node {
     // Otherwise, get a set of the marks for each character in the range.
     const chars = this.getCharactersAtRange(range)
     const first = chars.first()
+    if (!first) return []
+
     let memo = first.marks
+
     chars.slice(1).forEach((char) => {
       memo = memo.intersect(char.marks)
       return memo.size != 0
     })
+
     return memo.toArray()
   }
 
@@ -1365,6 +1376,54 @@ class Node {
   }
 
   /**
+   * Get the indexes of the selection for a `range`, given an extra flag for
+   * whether the node `isSelected`, to determine whether not finding matches
+   * means everything is selected or nothing is.
+   *
+   * @param {Selection} range
+   * @param {Boolean} isSelected
+   * @return {Object|Null}
+   */
+
+  getSelectionIndexes(range, isSelected = false) {
+    const { startKey, endKey } = range
+
+    // PERF: if we're not selected, or the range is blurred, we can exit early.
+    if (!isSelected || range.isBlurred) {
+      return null
+    }
+
+    // PERF: if the start and end keys are the same, just check for the child
+    // that contains that single key.
+    if (startKey == endKey) {
+      const child = this.getFurthestAncestor(startKey)
+      const index = child ? this.nodes.indexOf(child) : null
+      return { start: index, end: index + 1 }
+    }
+
+    // Otherwise, check all of the children...
+    let start = null
+    let end = null
+
+    this.nodes.forEach((child, i) => {
+      if (child.kind == 'text') {
+        if (start == null && child.key == startKey) start = i
+        if (end == null && child.key == endKey) end = i + 1
+      } else {
+        if (start == null && child.hasDescendant(startKey)) start = i
+        if (end == null && child.hasDescendant(endKey)) end = i + 1
+      }
+
+      // PERF: exit early if both start and end have been found.
+      return start != null && end != null
+    })
+
+    if (isSelected && start == null) start = 0
+    if (isSelected && end == null) end = this.nodes.size
+    return start == null ? null : { start, end }
+  }
+
+  /**
    * Get the concatenated text string of all child nodes.
    *
    * @return {String}
@@ -1547,6 +1606,49 @@ class Node {
 
     const nodes = this.nodes.insert(index, node)
     return this.set('nodes', nodes)
+  }
+
+  /**
+   * Check whether the node is in a `range`.
+   *
+   * @param {Selection} range
+   * @return {Boolean}
+   */
+
+  isInRange(range) {
+    range = range.normalize(this)
+
+    const node = this
+    const { startKey, endKey, isCollapsed } = range
+
+    // PERF: solve the most common cast where the start or end key are inside
+    // the node, for collapsed selections.
+    if (
+      node.key == startKey ||
+      node.key == endKey ||
+      node.hasDescendant(startKey) ||
+      node.hasDescendant(endKey)
+    ) {
+      return true
+    }
+
+    // PERF: if the selection is collapsed and the previous check didn't return
+    // true, then it must be false.
+    if (isCollapsed) {
+      return false
+    }
+
+    // Otherwise, look through all of the leaf text nodes in the range, to see
+    // if any of them are inside the node.
+    const texts = node.getTextsAtRange(range)
+    let memo = false
+
+    texts.forEach((text) => {
+      if (node.hasDescendant(text.key)) memo = true
+      return memo
+    })
+
+    return memo
   }
 
   /**
