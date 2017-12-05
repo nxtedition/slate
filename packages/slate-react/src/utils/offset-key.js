@@ -66,6 +66,11 @@ function findBounds(index, ranges) {
 
 function findKey(rawNode, rawOffset) {
   let { node, offset } = normalizeNodeAndOffset(rawNode, rawOffset)
+
+  if (!node) {
+    return null
+  }
+
   const { parentNode } = node
 
   // Find the closest parent with an offset key attribute.
