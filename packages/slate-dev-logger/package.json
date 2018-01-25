@@ -1,5 +1,6 @@
 {
   "name": "slate-dev-logger",
+  "private": true,
   "description": "A simple, development-only logger for Slate.",
   "version": "0.1.36",
   "license": "MIT",
