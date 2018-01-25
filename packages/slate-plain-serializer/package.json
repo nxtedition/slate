@@ -1,5 +1,6 @@
 {
   "name": "slate-plain-serializer",
+  "private": true,
   "description": "A plain text serializer for Slate editors.",
   "version": "0.5.11",
   "license": "MIT",
