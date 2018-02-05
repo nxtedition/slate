@@ -48,7 +48,7 @@ function getEventRange(event, value) {
     const nextText = document.getNextText(text.key)
 
     if (nextText) {
-      return range.moveToStartOf()
+      return range.moveToStartOf(nextText)
     }
   }
 
