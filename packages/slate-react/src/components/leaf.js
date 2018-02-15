@@ -122,6 +122,13 @@ class Leaf extends React.Component {
   renderText() {
     const { block, node, parent, text, index, leaves } = this.props
 
+    // COMPAT: If the text is empty and it's the only child, we need to render a
+    // line break to get the block to have the proper height. It's also needed
+    // to preserve line breaks when copying.
+    if (text == '' && parent.object == 'block' && parent.text == '') {
+      return <span data-slate-empty-block>{'\n'}</span>
+    }
+
     // COMPAT: Render text inside void nodes with a zero-width space.
     // So the node can contain selection but the text is not visible.
     if (parent.isVoid) return <span data-slate-zero-width>{'\u200B'}</span>
@@ -137,6 +144,7 @@ class Leaf extends React.Component {
     const lastChar = text.charAt(text.length - 1)
     const isLastText = node == lastText
     const isLastLeaf = index == leaves.size - 1
+
     if (isLastText && isLastLeaf && lastChar == '\n') return `${text}\n`
 
     // Otherwise, just return the text.
