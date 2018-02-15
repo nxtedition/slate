@@ -106,12 +106,7 @@ function cloneFragment(event, value, fragment = value.fragment) {
   div.style.margin = '0px'
   div.style.top = `${window.pageYOffset || window.document.documentElement.scrollTop}px`
 
-  // By surrounding the content we want copied with two textareas, we force
-  // browsers to copy the full html fragment (rather than only its inner text).
-  const textarea = window.document.createElement('textarea')
-  div.appendChild(textarea)
   div.appendChild(contents)
-  div.appendChild(textarea.cloneNode())
   editor.appendChild(div)
 
   // COMPAT: In Firefox, trying to use the terser `native.selectAllChildren`
